@@ -1,0 +1,44 @@
+
+# IP Highlighter Extension
+
+Annotates IP addresses on supported web pages with their country codes for quick reference.
+
+## Features
+
+- **Automatic IP annotation:** Detects IP addresses on supported pages and displays their country codes next to them.
+- **Works on specific sites:** Currently enabled for `https://gall.dcinside.com/*` (customize in `manifest.json`).
+- **Popup UI:** Click the extension icon to access additional features or settings (if implemented).
+- **Context menu integration:** Right-click IP addresses for extra actions (if enabled).
+- **Privacy-friendly:** All processing is done locally; no data is sent to external servers.
+
+## Installation
+
+1. Download or clone this repository.
+2. Go to `chrome://extensions` (or your browser's extensions page).
+3. Enable "Developer mode" (top right).
+4. Click "Load unpacked" and select the `extension` folder.
+
+## Usage
+
+- Visit a supported page (e.g., gall.dcinside.com).
+- IP addresses on the page will be annotated with their country codes automatically.
+- Click the extension icon for more options or information (if available).
+
+## Customization
+
+- To support more sites, edit the `matches` field in `manifest.json` under `content_scripts`.
+- To change icons, replace the files in the `icons/` directory.
+
+## License
+See [LICENSE](LICENSE).
+
+## Attribution
+
+This extension uses the [fflate](https://github.com/101arrowz/fflate) project (MIT License) for compression functionality.
+
+## Author
+- Jaewoo Jeon [@thejjw](https://github.com/thejjw)
+
+If you find this extension helpful, consider supporting its development:
+
+[![Buy Me A Coffee](https://cdn.buymeacoffee.com/buttons/default-yellow.png)](https://www.buymeacoffee.com/jwjeon)
