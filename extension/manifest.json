@@ -9,7 +9,6 @@
     "128": "icons/icon128.png"
   },
   "homepage_url": "https://github.com/thejjw/ip-highlighter-extension",
-  "support_url": "https://github.com/thejjw/ip-highlighter-extension/issues",
   "action": {
     "default_popup": "popup.html"
   },
