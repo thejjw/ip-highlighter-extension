@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "IP Highliter Extension",
+  "version": "1.0.0",
+  "description": "Automatically annotates IP addresses with their country codes on certain pages",
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "contextMenus"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://gall.dcinside.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

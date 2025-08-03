@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>IP Country Annotator</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <h1>IP Country Annotator</h1>
+  <p>Click to apply IP analysis and country annotation on the current page.</p>
+  
+  <div class="controls">
+    <button id="apply-annotation" class="primary-button">Apply IP Analysis</button>
+    <button id="clear-annotation" class="secondary-button">Clear Annotations</button>
+  </div>
+  
+  <div class="legend">
+    <h3>Color Legend:</h3>
+    <div class="legend-item">
+      <span class="color-box kr-only"></span>
+      <span>Korean IP only</span>
+    </div>
+    <div class="legend-item">
+      <span class="color-box kr-mixed"></span>
+      <span>Includes Korean IP</span>
+    </div>
+    <div class="legend-item">
+      <span class="color-box other"></span>
+      <span>Other countries</span>
+    </div>
+    <div class="legend-item">
+      <span class="color-box unknown"></span>
+      <span>Unknown/No data</span>
+    </div>
+  </div>
+  
+  <div class="debug-section">
+    <button id="toggle-debug" class="debug-button">Toggle Debug Mode</button>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
