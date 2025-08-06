@@ -37,7 +37,7 @@ See [LICENSE](LICENSE).
 
 ## Attribution
 
-This extension uses the [fflate](https://github.com/101arrowz/fflate) project (MIT License) for compression functionality.
+This extension uses the [fflate](https://github.com/101arrowz/fflate) project (MIT License) for decompression functionality.
 
 ## Author
 - Jaewoo Jeon [@thejjw](https://github.com/thejjw)
