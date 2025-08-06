@@ -18,6 +18,9 @@ Annotates IP addresses on supported web pages with their country codes for quick
 3. Enable "Developer mode" (top right).
 4. Click "Load unpacked" and select the `extension` folder.
 
+**Alternatively, install from the [Naver Whale Store](https://store.whale.naver.com/detail/oimkdokokdnhpmoplhgcgcdmpkafncij)**  
+_(Note: The Whale Store version may not always have the latest updates.)_
+
 ## Usage
 
 - Visit a supported page (e.g., gall.dcinside.com).
