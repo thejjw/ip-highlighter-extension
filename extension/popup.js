@@ -118,6 +118,14 @@ function showFeedback(message, type = 'info') {
 // Initialize button text based on current debug state
 document.addEventListener('DOMContentLoaded', async () => {
   try {
+    // Load version from manifest
+    const manifestData = chrome.runtime.getManifest();
+    const versionElement = document.getElementById('version');
+    if (versionElement && manifestData.version) {
+      versionElement.textContent = `v${manifestData.version}`;
+    }
+    
+    // Initialize debug button
     const result = await chrome.storage.local.get(['debugEnabled']);
     const debugEnabled = result.debugEnabled ?? false; // Default to false
     const button = document.getElementById('toggle-debug');

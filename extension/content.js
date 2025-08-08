@@ -2,9 +2,9 @@
 // Copyright (c) 2025 @thejjw
 
 // Content script for IP annotation on supported sites
-// This script runs on gall.dcinside.com, mlbpark.donga.com, and namu.wiki and annotates IP addresses using enhanced RIR_IPDB lookups.
+// This script runs on sites specified in manifest.json and annotates IP addresses using enhanced RIR_IPDB lookups.
 // For MLB Park, it uses more precise geolocation when additional octets are available (e.g., "IP: 58.29.*.54").
-// For namu.wiki, it uses precise lookup with full IP addresses from contribution links.
+// For namu.wiki, it uses precise lookup with full IP addresses from contribution link texts.
 
 // Debug flag - can be toggled via popup
 let DEBUG_ENABLED = false;

@@ -141,3 +141,9 @@ p {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+.copyright {
+  font-size: 9px;
+  color: #999;
+  text-align: center;
+}
