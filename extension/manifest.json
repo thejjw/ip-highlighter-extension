@@ -24,7 +24,8 @@
     {
       "matches": [
         "https://gall.dcinside.com/*",
-        "https://mlbpark.donga.com/*"
+        "https://mlbpark.donga.com/*",
+        "https://namu.wiki/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"

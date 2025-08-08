@@ -2,8 +2,9 @@
 // Copyright (c) 2025 @thejjw
 
 // Content script for IP annotation on supported sites
-// This script runs on gall.dcinside.com and mlbpark.donga.com and annotates IP addresses using enhanced RIR_IPDB lookups.
+// This script runs on gall.dcinside.com, mlbpark.donga.com, and namu.wiki and annotates IP addresses using enhanced RIR_IPDB lookups.
 // For MLB Park, it uses more precise geolocation when additional octets are available (e.g., "IP: 58.29.*.54").
+// For namu.wiki, it uses precise lookup with full IP addresses from contribution links.
 
 // Debug flag - can be toggled via popup
 let DEBUG_ENABLED = false;
@@ -266,7 +267,8 @@ function performIPAnnotation() {
   const host = window.location.hostname;
   const isGall = host.endsWith('gall.dcinside.com');
   const isMlbpark = host === 'mlbpark.donga.com';
-  if (!isGall && !isMlbpark) {
+  const isNamu = host === 'namu.wiki';
+  if (!isGall && !isMlbpark && !isNamu) {
     debugLog('Not a supported site:', host);
     return;
   }
@@ -281,43 +283,89 @@ function performIPAnnotation() {
       testQuery: window.RIR_IPDB.queryAb ? window.RIR_IPDB.queryAb(8, 8) : 'function not available'
     });
 
-    // Find all span.ip elements
-    const ipElements = document.querySelectorAll('span.ip');
-    debugLog('Found', ipElements.length, 'span.ip elements');
+    // Find IP elements based on site type
+    let ipElements = [];
+    
+    if (isNamu) {
+      // For namu.wiki: Find <a> elements with href="/contribution/..." and IP-like text
+      debugLog('Searching for namu.wiki IP elements...');
+      const contributionLinks = document.querySelectorAll('a[href*="/contribution/"]');
+      debugLog(`Found ${contributionLinks.length} contribution links`);
+      
+      contributionLinks.forEach(link => {
+        const text = link.textContent.trim();
+        // Check if text looks like an IP address (simple validation)
+        const ipPattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+        if (ipPattern.test(text)) {
+          const parts = text.split('.').map(p => parseInt(p, 10));
+          // Validate IP octets (0-255)
+          if (parts.every(p => p >= 0 && p <= 255)) {
+            debugLog(`Found namu.wiki IP element: ${text}`);
+            ipElements.push(link);
+          }
+        }
+      });
+    } else {
+      // For other sites: Find span.ip elements
+      ipElements = Array.from(document.querySelectorAll('span.ip'));
+    }
+    
+    debugLog('Found', ipElements.length, 'IP elements');
 
     ipElements.forEach(function(el, index) {
       debugLog(`Processing element ${index + 1}:`, el.textContent);
       let m = null;
-      if (isGall) {
+      let num1, num2, num3, num4;
+      
+      if (isNamu) {
+        // namu.wiki: Full IP address like "119.200.148.199"
+        const fullIpMatch = el.textContent.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+        if (fullIpMatch) {
+          num1 = parseInt(fullIpMatch[1], 10);
+          num2 = parseInt(fullIpMatch[2], 10);
+          num3 = parseInt(fullIpMatch[3], 10);
+          num4 = parseInt(fullIpMatch[4], 10);
+          m = fullIpMatch; // Set m to indicate we found a match
+        }
+      } else if (isGall) {
         // gall.dcinside.com: (156.146)
         m = el.textContent.match(/\((\d+)\.(\d+)\)/);
+        if (m) {
+          num1 = parseInt(m[1], 10);
+          num2 = parseInt(m[2], 10);
+          num3 = null;
+          num4 = null;
+        }
       } else if (isMlbpark) {
         // mlbpark.donga.com: "IP: 58.29.*.54" or "IP: 156.146.*.*" 
         // Capture all available octets
         m = el.textContent.match(/IP:\s*(\d+)\.(\d+)\.(?:(\d+)|\*)\.(?:(\d+)|\*)/i);
+        if (m) {
+          num1 = parseInt(m[1], 10);
+          num2 = parseInt(m[2], 10);
+          num3 = m[3] ? parseInt(m[3], 10) : null; // Third octet if available
+          num4 = m[4] ? parseInt(m[4], 10) : null; // Last octet if available
+        }
       }
+      
       if (!m) {
         debugLog(`No match for pattern in: "${el.textContent}"`);
         return;
       }
-      const num1 = parseInt(m[1], 10);
-      const num2 = parseInt(m[2], 10);
-      const num3 = m[3] ? parseInt(m[3], 10) : null; // Third octet if available
-      const num4 = m[4] ? parseInt(m[4], 10) : null; // Last octet if available
       
       let countries;
-      if (isMlbpark && (num3 !== null || num4 !== null)) {
+      if (isNamu || (isMlbpark && num3 !== null && num4 !== null)) {
+        // For namu.wiki or MLB Park with full IP, use precise lookup
+        const fullIp = `${num1}.${num2}.${num3}.${num4}`;
+        debugLog(`Using precise IP lookup for: ${fullIp}`);
+        const country = window.RIR_IPDB.findCountryForIp(fullIp);
+        countries = country ? [country] : [];
+      } else if (isMlbpark && (num3 !== null || num4 !== null)) {
         // For MLB Park with partial IP info, try more precise lookup
         // Sample multiple IPs in the range to get better coverage
         const countriesSet = new Set();
         
-        if (num3 !== null && num4 !== null) {
-          // Full IP available: a.b.c.d
-          const fullIp = `${num1}.${num2}.${num3}.${num4}`;
-          debugLog(`Using full IP lookup for: ${fullIp}`);
-          const country = window.RIR_IPDB.findCountryForIp(fullIp);
-          if (country) countriesSet.add(country);
-        } else if (num4 !== null) {
+        if (num4 !== null) {
           // Pattern like a.b.*.d - sample multiple third octets
           debugLog(`Using enhanced lookup for pattern: ${num1}.${num2}.*.${num4}`);
           for (let c = 0; c <= 255; c += 64) { // Sample every 64th value
@@ -358,7 +406,9 @@ function performIPAnnotation() {
       if (countries.length) {
         // Create detailed tooltip with lookup method info
         let tooltipText = `RIR Data: ${countries.join(', ')}`;
-        if (isMlbpark && (num3 !== null || num4 !== null)) {
+        if (isNamu) {
+          tooltipText += ` (precise: ${num1}.${num2}.${num3}.${num4})`;
+        } else if (isMlbpark && (num3 !== null || num4 !== null)) {
           if (num3 !== null && num4 !== null) {
             tooltipText += ` (precise: ${num1}.${num2}.${num3}.${num4})`;
           } else if (num4 !== null) {

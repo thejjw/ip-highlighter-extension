@@ -9,7 +9,7 @@ chrome.runtime.onInstalled.addListener(() => {
     id: 'ip-annotator-parent',
     title: 'IP Country Annotator',
     contexts: ['page'],
-    documentUrlPatterns: ['https://gall.dcinside.com/*', 'https://mlbpark.donga.com/*']
+    documentUrlPatterns: ['https://gall.dcinside.com/*', 'https://mlbpark.donga.com/*', 'https://namu.wiki/*']
   });
   
   // Create child menu items under the parent
@@ -18,7 +18,7 @@ chrome.runtime.onInstalled.addListener(() => {
     parentId: 'ip-annotator-parent',
     title: 'Apply IP Analysis',
     contexts: ['page'],
-    documentUrlPatterns: ['https://gall.dcinside.com/*', 'https://mlbpark.donga.com/*']
+    documentUrlPatterns: ['https://gall.dcinside.com/*', 'https://mlbpark.donga.com/*', 'https://namu.wiki/*']
   });
   
   chrome.contextMenus.create({
@@ -26,7 +26,7 @@ chrome.runtime.onInstalled.addListener(() => {
     parentId: 'ip-annotator-parent',
     title: 'Clear IP Annotations',
     contexts: ['page'],
-    documentUrlPatterns: ['https://gall.dcinside.com/*', 'https://mlbpark.donga.com/*']
+    documentUrlPatterns: ['https://gall.dcinside.com/*', 'https://mlbpark.donga.com/*', 'https://namu.wiki/*']
   });
 });
 
