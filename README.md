@@ -6,7 +6,7 @@ Annotates IP addresses on supported web pages with their country codes for quick
 ## Features
 
 - **Automatic IP annotation:** Detects IP addresses on supported pages and displays their country codes next to them.
-- **Works on specific sites:** Currently enabled for `https://gall.dcinside.com/*` (customize in `manifest.json`).
+- **Works on specific sites:** Currently enabled for `https://gall.dcinside.com/*` and `https://mlbpark.donga.com/*` (customize in `manifest.json`).
 - **Popup UI:** Click the extension icon to access additional features or settings (if implemented).
 - **Context menu integration:** Right-click IP addresses for extra actions (if enabled).
 - **Privacy-friendly:** All processing is done locally; no data is sent to external servers.
@@ -23,7 +23,7 @@ _(Note: The Whale Store version may not always have the latest updates.)_
 
 ## Usage
 
-- Visit a supported page (e.g., gall.dcinside.com).
+- Visit a supported page (e.g., gall.dcinside.com or mlbpark.donga.com).
 - IP addresses on the page will be annotated with their country codes automatically.
 - Click the extension icon for more options or information (if available).
 

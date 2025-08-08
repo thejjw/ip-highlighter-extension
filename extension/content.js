@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: zlib-acknowledgement
 // Copyright (c) 2025 @thejjw
 
-// Content script for gall.dcinside.com annotation
-// This script runs on gall.dcinside.com and annotates target sections using RIR_IPDB.queryAb
+// Content script for IP annotation on supported sites
+// This script runs on gall.dcinside.com and mlbpark.donga.com and annotates IP addresses using enhanced RIR_IPDB lookups.
+// For MLB Park, it uses more precise geolocation when additional octets are available (e.g., "IP: 58.29.*.54").
 
 // Debug flag - can be toggled via popup
 let DEBUG_ENABLED = false;
@@ -260,45 +261,116 @@ debugLog('Content script loaded, DOM state:', {
 // Function to perform IP annotation
 function performIPAnnotation() {
   debugLog('performIPAnnotation called, starting annotation logic...');
-  
+
+  // Only run on supported sites
+  const host = window.location.hostname;
+  const isGall = host.endsWith('gall.dcinside.com');
+  const isMlbpark = host === 'mlbpark.donga.com';
+  if (!isGall && !isMlbpark) {
+    debugLog('Not a supported site:', host);
+    return;
+  }
+
   waitForIpdbReady(() => {
     debugLog('RIR_IPDB ready, searching for span.ip elements...');
-    
+
     // Test if queryAb function is accessible
     debugLog('Testing RIR_IPDB functions:', {
       hasQueryAb: typeof window.RIR_IPDB.queryAb === 'function',
       hasFindCountryForIp: typeof window.RIR_IPDB.findCountryForIp === 'function',
       testQuery: window.RIR_IPDB.queryAb ? window.RIR_IPDB.queryAb(8, 8) : 'function not available'
     });
-    
-    // Find all span.ip elements (as in find-and-add-overlay.js)
+
+    // Find all span.ip elements
     const ipElements = document.querySelectorAll('span.ip');
     debugLog('Found', ipElements.length, 'span.ip elements');
-    
+
     ipElements.forEach(function(el, index) {
       debugLog(`Processing element ${index + 1}:`, el.textContent);
-      // Extract num1.num2 from the text (e.g., "(156.146)" => 156.146)
-      const m = el.textContent.match(/\((\d+)\.(\d+)\)/);
+      let m = null;
+      if (isGall) {
+        // gall.dcinside.com: (156.146)
+        m = el.textContent.match(/\((\d+)\.(\d+)\)/);
+      } else if (isMlbpark) {
+        // mlbpark.donga.com: "IP: 58.29.*.54" or "IP: 156.146.*.*" 
+        // Capture all available octets
+        m = el.textContent.match(/IP:\s*(\d+)\.(\d+)\.(?:(\d+)|\*)\.(?:(\d+)|\*)/i);
+      }
       if (!m) {
         debugLog(`No match for pattern in: "${el.textContent}"`);
         return;
       }
       const num1 = parseInt(m[1], 10);
       const num2 = parseInt(m[2], 10);
-      debugLog(`Extracted numbers: ${num1}.${num2}`);
+      const num3 = m[3] ? parseInt(m[3], 10) : null; // Third octet if available
+      const num4 = m[4] ? parseInt(m[4], 10) : null; // Last octet if available
       
-      // Query RIR_IPDB
-      const countries = window.RIR_IPDB.queryAb(num1, num2);
-      debugLog(`Query result for ${num1}.${num2}:`, countries);
+      let countries;
+      if (isMlbpark && (num3 !== null || num4 !== null)) {
+        // For MLB Park with partial IP info, try more precise lookup
+        // Sample multiple IPs in the range to get better coverage
+        const countriesSet = new Set();
+        
+        if (num3 !== null && num4 !== null) {
+          // Full IP available: a.b.c.d
+          const fullIp = `${num1}.${num2}.${num3}.${num4}`;
+          debugLog(`Using full IP lookup for: ${fullIp}`);
+          const country = window.RIR_IPDB.findCountryForIp(fullIp);
+          if (country) countriesSet.add(country);
+        } else if (num4 !== null) {
+          // Pattern like a.b.*.d - sample multiple third octets
+          debugLog(`Using enhanced lookup for pattern: ${num1}.${num2}.*.${num4}`);
+          for (let c = 0; c <= 255; c += 64) { // Sample every 64th value
+            const testIp = `${num1}.${num2}.${c}.${num4}`;
+            const country = window.RIR_IPDB.findCountryForIp(testIp);
+            if (country) countriesSet.add(country);
+          }
+        } else if (num3 !== null) {
+          // Pattern like a.b.c.* - sample multiple fourth octets
+          debugLog(`Using enhanced lookup for pattern: ${num1}.${num2}.${num3}.*`);
+          for (let d = 1; d <= 254; d += 64) { // Sample every 64th value, skip 0 and 255
+            const testIp = `${num1}.${num2}.${num3}.${d}`;
+            const country = window.RIR_IPDB.findCountryForIp(testIp);
+            if (country) countriesSet.add(country);
+          }
+        }
+        
+        countries = Array.from(countriesSet);
+        
+        // If no results from precise lookup, fallback to range query
+        if (countries.length === 0) {
+          debugLog(`No results from precise lookup, falling back to range query`);
+          countries = window.RIR_IPDB.queryAb(num1, num2);
+        }
+      } else {
+        // Fallback to range query for partial IPs or gall.dcinside.com
+        debugLog(`Using range query for: ${num1}.${num2}`);
+        countries = window.RIR_IPDB.queryAb(num1, num2);
+      }
       
+      debugLog(`Query result:`, countries);
+
       // Determine styling based on KR presence
       const hasKR = countries.includes('KR');
       const isKROnly = countries.length === 1 && countries[0] === 'KR';
-      
+
       // Annotate the element
       if (countries.length) {
-        el.title = `RIR Data: ${countries.join(', ')}`;
-        
+        // Create detailed tooltip with lookup method info
+        let tooltipText = `RIR Data: ${countries.join(', ')}`;
+        if (isMlbpark && (num3 !== null || num4 !== null)) {
+          if (num3 !== null && num4 !== null) {
+            tooltipText += ` (precise: ${num1}.${num2}.${num3}.${num4})`;
+          } else if (num4 !== null) {
+            tooltipText += ` (enhanced: ${num1}.${num2}.*.${num4})`;
+          } else {
+            tooltipText += ` (enhanced: ${num1}.${num2}.${num3}.*)`;
+          }
+        } else {
+          tooltipText += ` (range: ${num1}.${num2}.*.*)`;
+        }
+        el.title = tooltipText;
+
         if (isKROnly) {
           // Darker green for KR only
           el.style.background = '#28a745';  // Bootstrap success color (darker green)
@@ -311,7 +383,7 @@ function performIPAnnotation() {
           // Default yellow for other countries
           el.style.background = '#ffeeba';  // Bootstrap warning light
         }
-        
+
         el.style.borderRadius = '4px';
         el.style.padding = '2px 4px';
         debugLog(`Annotated element with countries: ${countries.join(', ')}, hasKR: ${hasKR}, isKROnly: ${isKROnly}`);
@@ -323,7 +395,7 @@ function performIPAnnotation() {
         debugLog('Annotated element with no country found');
       }
     });
-    
+
     debugLog('Annotation complete');
     const count = ipElements.length;
     showTemporaryNotification(`IP analysis applied to ${count} element${count !== 1 ? 's' : ''}`);
