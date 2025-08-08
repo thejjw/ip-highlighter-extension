@@ -2,14 +2,14 @@
 // Copyright (c) 2025 @thejjw
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('IP Country Annotator for DCInside extension installed.');
+  console.log('IP Country Annotator extension installed.');
   
   // Create parent context menu item
   chrome.contextMenus.create({
     id: 'ip-annotator-parent',
     title: 'IP Country Annotator',
     contexts: ['page'],
-    documentUrlPatterns: ['https://gall.dcinside.com/*']
+    documentUrlPatterns: ['https://gall.dcinside.com/*', 'https://mlbpark.donga.com/*']
   });
   
   // Create child menu items under the parent
@@ -18,7 +18,7 @@ chrome.runtime.onInstalled.addListener(() => {
     parentId: 'ip-annotator-parent',
     title: 'Apply IP Analysis',
     contexts: ['page'],
-    documentUrlPatterns: ['https://gall.dcinside.com/*']
+    documentUrlPatterns: ['https://gall.dcinside.com/*', 'https://mlbpark.donga.com/*']
   });
   
   chrome.contextMenus.create({
@@ -26,7 +26,7 @@ chrome.runtime.onInstalled.addListener(() => {
     parentId: 'ip-annotator-parent',
     title: 'Clear IP Annotations',
     contexts: ['page'],
-    documentUrlPatterns: ['https://gall.dcinside.com/*']
+    documentUrlPatterns: ['https://gall.dcinside.com/*', 'https://mlbpark.donga.com/*']
   });
 });
 

@@ -18,7 +18,7 @@ document.getElementById('apply-annotation').addEventListener('click', async () =
     }
   } catch (error) {
     console.error('Error applying IP annotation:', error);
-    showFeedback('Error: Make sure you are on a DCInside page', 'error');
+    showFeedback('Error: Make sure you are on a supported page', 'error');
   }
 });
 
@@ -39,7 +39,7 @@ document.getElementById('clear-annotation').addEventListener('click', async () =
     }
   } catch (error) {
     console.error('Error clearing IP annotation:', error);
-    showFeedback('Error: Make sure you are on a DCInside page', 'error');
+    showFeedback('Error: Make sure you are on a supported page', 'error');
   }
 });
 
