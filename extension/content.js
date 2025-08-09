@@ -4,7 +4,8 @@
 // Content script for IP annotation on supported sites
 // This script runs on sites specified in manifest.json and annotates IP addresses using enhanced RIR_IPDB lookups.
 // For MLB Park, it uses more precise geolocation when additional octets are available (e.g., "IP: 58.29.*.54").
-// For namu.wiki, it uses precise lookup with full IP addresses from contribution link texts.
+// For namu.wiki, it uses precise lookup with full IP addresses.
+// Now includes Korean Mobile Carrier (ISP) detection for 통피 identification.
 
 // Debug flag - can be toggled via popup
 let DEBUG_ENABLED = false;
@@ -235,6 +236,82 @@ debugLog('Content script starting to load...', {
     });
 })(window);
 
+// === Korean Mobile Carrier ISP Database (https://namu.wiki/w/%ED%86%B5%EC%8B%A0%EC%82%AC%20IP,r334) ===
+// Database for identifying Korean mobile carriers (SK Telecom, KT, LG U+) from IP addresses
+const ISP_DATABASE = {
+  ranges: [
+    // SK Telecom (SKT) - All networks combined
+    { start: '27.160.0.0', end: '27.183.255.255', isp: 'SKT' },
+    { start: '42.35.0.0', end: '42.36.255.255', isp: 'SKT', popular: true }, // Roaming
+    { start: '203.226.192.0', end: '203.226.252.255', isp: 'SKT' },
+    { start: '211.234.0.0', end: '211.234.255.255', isp: 'SKT' }, // Combined 128-239 and 244-255 ranges
+    { start: '211.235.0.0', end: '211.235.255.255', isp: 'SKT' },
+    { start: '223.32.0.0', end: '223.63.255.255', isp: 'SKT', popular: true }, // Famous "통피" range
+    
+    // KT - All networks combined  
+    { start: '39.7.0.0', end: '39.7.255.255', isp: 'KT', popular: true }, // Combined 3G/4G/5G (note: 5G uses smaller 39.7.48.0/24 subset)
+    { start: '110.70.0.0', end: '110.70.255.255', isp: 'KT' },
+    { start: '118.235.0.0', end: '118.235.255.255', isp: 'KT', popular: true },
+    { start: '175.223.0.0', end: '175.223.255.255', isp: 'KT', popular: true },
+    { start: '211.246.0.0', end: '211.246.255.255', isp: 'KT' },
+    
+    // LG U+ - All networks combined
+    { start: '106.101.0.0', end: '106.101.255.255', isp: 'U+', popular: true }, // 5G
+    { start: '106.102.0.0', end: '106.102.255.255', isp: 'U+', popular: true }, // 4G  
+    { start: '117.111.0.0', end: '117.111.255.255', isp: 'U+', popular: true },
+    { start: '125.188.0.0', end: '125.188.255.255', isp: 'U+' },
+    { start: '211.36.128.0', end: '211.36.159.255', isp: 'U+', popular: true },
+    { start: '211.36.224.0', end: '211.36.255.255', isp: 'U+', popular: true }
+  ]
+};
+
+/**
+ * Convert IP address to integer for comparison
+ * @param {string} ip - IP address in dotted notation
+ * @returns {number} - IP as integer
+ */
+function ipToInt(ip) {
+  const parts = ip.split('.');
+  return ((parseInt(parts[0]) << 24) +
+          (parseInt(parts[1]) << 16) + 
+          (parseInt(parts[2]) << 8) + 
+          parseInt(parts[3])) >>> 0;
+}
+
+/**
+ * Query ISP information for a given IP address
+ * @param {string} ipAddress - IP address to lookup
+ * @returns {Object|null} - ISP information or null if not found
+ */
+function queryISP(ipAddress) {
+  const ipInt = ipToInt(ipAddress);
+  
+  for (const range of ISP_DATABASE.ranges) {
+    const startInt = ipToInt(range.start);
+    const endInt = ipToInt(range.end);
+    
+    if (ipInt >= startInt && ipInt <= endInt) {
+      return {
+        ip: ipAddress,
+        isp: range.isp,
+        popular: range.popular || false,
+        range: `${range.start} - ${range.end}`
+      };
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Quick check if an IP belongs to any Korean mobile carrier
+ * @param {string} ipAddress - IP address to check
+ * @returns {boolean} - True if it's a mobile carrier IP
+ */
+function isMobileCarrierIP(ipAddress) {
+  return queryISP(ipAddress) !== null;
+}
+
 // == Wait for RIR_IPDB to be ready ==
 function waitForIpdbReady(cb) {
   debugLog('waitForIpdbReady called, checking RIR_IPDB...', {
@@ -365,7 +442,13 @@ function performIPAnnotation() {
         // Sample multiple IPs in the range to get better coverage
         const countriesSet = new Set();
         
-        if (num4 !== null) {
+        if (num3 !== null && num4 !== null) {
+          // Full IP available: a.b.c.d
+          const fullIp = `${num1}.${num2}.${num3}.${num4}`;
+          debugLog(`Using full IP lookup for: ${fullIp}`);
+          const country = window.RIR_IPDB.findCountryForIp(fullIp);
+          if (country) countriesSet.add(country);
+        } else if (num4 !== null) {
           // Pattern like a.b.*.d - sample multiple third octets
           debugLog(`Using enhanced lookup for pattern: ${num1}.${num2}.*.${num4}`);
           for (let c = 0; c <= 255; c += 64) { // Sample every 64th value
@@ -404,8 +487,51 @@ function performIPAnnotation() {
 
       // Annotate the element
       if (countries.length) {
-        // Create detailed tooltip with lookup method info
-        let tooltipText = `RIR Data: ${countries.join(', ')}`;
+        // Check for Korean mobile carrier ISP info
+        let ispInfo = null;
+        let ispText = '';
+        
+        // Try to get ISP info for Korean IPs
+        if (hasKR) {
+          // For precise IPs, do exact ISP lookup
+          if ((isNamu && num3 !== null && num4 !== null) || (isMlbpark && num3 !== null && num4 !== null)) {
+            const fullIp = `${num1}.${num2}.${num3}.${num4}`;
+            ispInfo = queryISP(fullIp);
+            debugLog(`ISP lookup for ${fullIp}:`, ispInfo);
+          } else {
+            // For partial IPs, sample some representative IPs to check for mobile carrier
+            const testIps = [];
+            if (isMlbpark && num3 !== null) {
+              // Pattern like a.b.c.*
+              testIps.push(`${num1}.${num2}.${num3}.1`, `${num1}.${num2}.${num3}.50`, `${num1}.${num2}.${num3}.100`);
+            } else if (isMlbpark && num4 !== null) {
+              // Pattern like a.b.*.d
+              testIps.push(`${num1}.${num2}.1.${num4}`, `${num1}.${num2}.50.${num4}`, `${num1}.${num2}.100.${num4}`);
+            } else {
+              // Pattern like a.b.*.*
+              testIps.push(`${num1}.${num2}.1.1`, `${num1}.${num2}.50.50`, `${num1}.${num2}.100.100`);
+            }
+            
+            // Check if any test IPs match a mobile carrier
+            for (const testIp of testIps) {
+              const testInfo = queryISP(testIp);
+              if (testInfo) {
+                ispInfo = testInfo;
+                debugLog(`ISP lookup for test IP ${testIp}:`, ispInfo);
+                break;
+              }
+            }
+          }
+          
+          // Generate ISP text for tooltip
+          if (ispInfo) {
+            ispText = `,${ispInfo.isp}`;
+            debugLog(`Adding ISP info to tooltip: ${ispText}`);
+          }
+        }
+        
+        // Create detailed tooltip with lookup method info and ISP info
+        let tooltipText = `RIR Data: ${countries.join(', ')}${ispText}`;
         if (isNamu) {
           tooltipText += ` (precise: ${num1}.${num2}.${num3}.${num4})`;
         } else if (isMlbpark && (num3 !== null || num4 !== null)) {
