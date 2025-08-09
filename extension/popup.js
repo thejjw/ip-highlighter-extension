@@ -134,3 +134,82 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('Error initializing popup:', error);
   }
 });
+
+// === IP Lookup Tool ===
+
+// IP Lookup functionality
+document.getElementById('lookup-ip').addEventListener('click', performIPLookup);
+document.getElementById('ip-input').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    performIPLookup();
+  }
+});
+
+async function performIPLookup() {
+  const input = document.getElementById('ip-input').value.trim();
+  const resultDiv = document.getElementById('lookup-result');
+  
+  if (!input) {
+    showLookupResult('Please enter an IP address or pattern', 'error');
+    return;
+  }
+  
+  showLookupResult('Looking up...', 'loading');
+  
+  try {
+    // Send message to content script to perform lookup using RIR database and ISP logic
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tabs[0]) {
+      const response = await chrome.tabs.sendMessage(tabs[0].id, { 
+        type: 'LOOKUP_IP',
+        ip: input
+      });
+      
+      if (response && response.success) {
+        displayLookupResult(input, response.result);
+      } else {
+        showLookupResult(`Error: ${response?.error || 'Unknown error'}`, 'error');
+      }
+    } else {
+      showLookupResult('Error: No active tab found', 'error');
+    }
+  } catch (error) {
+    console.error('Error performing IP lookup:', error);
+    showLookupResult('Error: Make sure you are on a supported page (gall.dcinside.com, mlbpark.donga.com, or namu.wiki)', 'error');
+  }
+}
+
+function displayLookupResult(input, result) {
+  const { countries, ispInfo, method } = result;
+  
+  let resultText = `Input: ${input}\n`;
+  
+  if (countries && countries.length > 0) {
+    let countryText = countries.join(', ');
+    
+    // Add ISP info if available
+    if (ispInfo) {
+      countryText += `(📱${ispInfo.isp})`;
+    }
+    
+    resultText += `Country: ${countryText}\n`;
+    resultText += `Method: ${method}\n`;
+    
+    if (ispInfo) {
+      resultText += `ISP Range: ${ispInfo.range}`;
+      if (ispInfo.popular) {
+        resultText += ' (Popular)';
+      }
+    }
+  } else {
+    resultText += 'Country: Unknown/Not found';
+  }
+  
+  showLookupResult(resultText, 'success');
+}
+
+function showLookupResult(message, type) {
+  const resultDiv = document.getElementById('lookup-result');
+  resultDiv.textContent = message;
+  resultDiv.className = `lookup-result ${type}`;
+}

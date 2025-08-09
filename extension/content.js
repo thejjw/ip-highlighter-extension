@@ -29,6 +29,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     debugLog('Received CLEAR_IP_ANNOTATION message');
     clearIPAnnotations();
     sendResponse({ success: true });
+  } else if (message.type === 'LOOKUP_IP') {
+    debugLog('Received LOOKUP_IP message:', message.ip);
+    handleIPLookup(message.ip, sendResponse);
+    return true; // Keep message channel open for async response
   }
 });
 
@@ -650,4 +654,143 @@ function showTemporaryNotification(message) {
       }
     }, 300);
   }, 2500);
+}
+
+// === IP Lookup Handler for Popup ===
+function handleIPLookup(input, sendResponse) {
+  // Wait for RIR database to be ready
+  waitForIpdbReady(() => {
+    try {
+      const result = performIPLookupLogic(input);
+      sendResponse({ success: true, result });
+    } catch (error) {
+      debugLog('Error in IP lookup:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+  });
+}
+
+function performIPLookupLogic(input) {
+  // Parse input to handle different patterns
+  const patterns = {
+    // Full IP: 1.2.3.4
+    full: /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/,
+    // Partial patterns: 1.2.*.*, 1.2.*.4, 1.2.3.*
+    partial: /^(\d{1,3})\.(\d{1,3})\.(?:(\d{1,3})|\*)\.(?:(\d{1,3})|\*)$/
+  };
+  
+  let match = input.match(patterns.full);
+  if (match) {
+    // Full IP address
+    const num1 = parseInt(match[1], 10);
+    const num2 = parseInt(match[2], 10);
+    const num3 = parseInt(match[3], 10);
+    const num4 = parseInt(match[4], 10);
+    
+    // Validate IP octets
+    if ([num1, num2, num3, num4].some(n => n < 0 || n > 255)) {
+      throw new Error('Invalid IP address: octets must be 0-255');
+    }
+    
+    const fullIp = `${num1}.${num2}.${num3}.${num4}`;
+    const country = window.RIR_IPDB.findCountryForIp(fullIp);
+    const countries = country ? [country] : [];
+    const ispInfo = countries.includes('KR') ? queryISP(fullIp) : null;
+    
+    return {
+      countries,
+      ispInfo,
+      method: `Precise lookup for ${fullIp}`
+    };
+  }
+  
+  match = input.match(patterns.partial);
+  if (match) {
+    // Partial IP pattern
+    const num1 = parseInt(match[1], 10);
+    const num2 = parseInt(match[2], 10);
+    const num3 = match[3] ? parseInt(match[3], 10) : null;
+    const num4 = match[4] ? parseInt(match[4], 10) : null;
+    
+    // Validate provided octets
+    const providedNums = [num1, num2, num3, num4].filter(n => n !== null);
+    if (providedNums.some(n => n < 0 || n > 255)) {
+      throw new Error('Invalid IP address: octets must be 0-255');
+    }
+    
+    // Sample multiple IPs in the range for better coverage
+    const countriesSet = new Set();
+    let ispInfo = null;
+    let sampleCount = 0;
+    const maxSamples = 20;
+    
+    if (num3 !== null && num4 !== null) {
+      // Full IP available: a.b.c.d
+      const fullIp = `${num1}.${num2}.${num3}.${num4}`;
+      const country = window.RIR_IPDB.findCountryForIp(fullIp);
+      if (country) {
+        countriesSet.add(country);
+        if (country === 'KR') {
+          ispInfo = queryISP(fullIp);
+        }
+      }
+      sampleCount = 1;
+    } else if (num4 !== null) {
+      // Pattern like a.b.*.d - sample multiple third octets
+      for (let c = 0; c <= 255 && sampleCount < maxSamples; c += Math.max(1, Math.floor(255 / maxSamples))) {
+        const testIp = `${num1}.${num2}.${c}.${num4}`;
+        const country = window.RIR_IPDB.findCountryForIp(testIp);
+        if (country) {
+          countriesSet.add(country);
+          if (country === 'KR' && !ispInfo) {
+            ispInfo = queryISP(testIp);
+          }
+        }
+        sampleCount++;
+      }
+    } else if (num3 !== null) {
+      // Pattern like a.b.c.* - sample multiple fourth octets
+      for (let d = 0; d <= 255 && sampleCount < maxSamples; d += Math.max(1, Math.floor(255 / maxSamples))) {
+        const testIp = `${num1}.${num2}.${num3}.${d}`;
+        const country = window.RIR_IPDB.findCountryForIp(testIp);
+        if (country) {
+          countriesSet.add(country);
+          if (country === 'KR' && !ispInfo) {
+            ispInfo = queryISP(testIp);
+          }
+        }
+        sampleCount++;
+      }
+    } else {
+      // Pattern like a.b.*.* - sample grid
+      const step = Math.max(1, Math.floor(255 / Math.sqrt(maxSamples)));
+      for (let c = 0; c <= 255 && sampleCount < maxSamples; c += step) {
+        for (let d = 0; d <= 255 && sampleCount < maxSamples; d += step) {
+          const testIp = `${num1}.${num2}.${c}.${d}`;
+          const country = window.RIR_IPDB.findCountryForIp(testIp);
+          if (country) {
+            countriesSet.add(country);
+            if (country === 'KR' && !ispInfo) {
+              ispInfo = queryISP(testIp);
+            }
+          }
+          sampleCount++;
+        }
+      }
+    }
+    
+    const countries = Array.from(countriesSet);
+    const methodDesc = num3 !== null && num4 !== null ? 'precise' :
+                       num4 !== null ? 'enhanced (*.d pattern)' :
+                       num3 !== null ? 'enhanced (c.* pattern)' :
+                       'sampled (*.* pattern)';
+    
+    return {
+      countries,
+      ispInfo,
+      method: `${methodDesc} lookup (${sampleCount} samples)`
+    };
+  }
+  
+  throw new Error('Invalid IP format. Use formats like: 1.2.3.4, 1.2.*.*, 1.2.*.4, or 1.2.3.*');
 }
