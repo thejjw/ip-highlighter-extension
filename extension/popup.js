@@ -43,38 +43,6 @@ document.getElementById('clear-annotation').addEventListener('click', async () =
   }
 });
 
-// Toggle debug mode functionality
-document.getElementById('toggle-debug').addEventListener('click', async () => {
-  try {
-    // Get current debug state from storage
-    const result = await chrome.storage.local.get(['debugEnabled']);
-    const currentDebug = result.debugEnabled ?? true; // Default to true
-    const newDebug = !currentDebug;
-    
-    // Save new debug state
-    await chrome.storage.local.set({ debugEnabled: newDebug });
-    
-    // Send message to content script to update debug flag
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tabs[0]) {
-      chrome.tabs.sendMessage(tabs[0].id, { 
-        type: 'UPDATE_DEBUG', 
-        debugEnabled: newDebug 
-      });
-    }
-    
-    // Update button text
-    const button = document.getElementById('toggle-debug');
-    button.textContent = newDebug ? 'Disable Debug Mode' : 'Enable Debug Mode';
-    
-    // Show feedback
-    showFeedback(`Debug mode ${newDebug ? 'enabled' : 'disabled'}`, 'info');
-  } catch (error) {
-    console.error('Error toggling debug mode:', error);
-    showFeedback('Error toggling debug mode', 'error');
-  }
-});
-
 // Helper function to show feedback messages
 function showFeedback(message, type = 'info') {
   // Remove any existing feedback
