@@ -24,8 +24,9 @@ _(Note: The Whale Store version may not always have the latest updates.)_
 ## Usage
 
 - Visit a supported page (e.g., gall.dcinside.com, mlbpark.donga.com, or namu.wiki).
-- IP addresses on the page will be annotated with their country codes automatically.
-- Click the extension icon for more options or information (if available).
+- To annotate IP addresses with their country codes, use right-click menu that the extension provides.
+- The extension will then highlight and display country codes for the IP addresses.
+- (Optional) Click the extension icon for more options or information.
 
 ## Customization
 
