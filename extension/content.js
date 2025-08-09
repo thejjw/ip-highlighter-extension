@@ -525,7 +525,7 @@ function performIPAnnotation() {
           
           // Generate ISP text for tooltip
           if (ispInfo) {
-            ispText = `,${ispInfo.isp}`;
+            ispText = `(📱${ispInfo.isp})`;
             debugLog(`Adding ISP info to tooltip: ${ispText}`);
           }
         }
