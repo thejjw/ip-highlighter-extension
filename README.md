@@ -5,7 +5,7 @@ Annotates IP addresses on supported web pages with their country codes for quick
 
 ## Features
 
-- **Automatic IP annotation:** Detects IP addresses on supported pages and displays their country codes next to them at user request.
+- **Automatic IP annotation:** Detects IP addresses on supported pages and displays their country codes on tooltip at user request.
 - **Works on specific sites:** Currently enabled for `https://gall.dcinside.com/*`, `https://mlbpark.donga.com/*`, and `https://namu.wiki/*` (customize in `manifest.json`).
 - **Popup UI:** Click the extension icon to access additional features.
 - **Context menu integration:** Right-click on supported pages for annotation actions.
