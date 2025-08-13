@@ -45,4 +45,4 @@ This extension uses the [fflate](https://github.com/101arrowz/fflate) project (M
 
 If you find this extension helpful, consider supporting its development:
 
-[![Buy Me A Coffee](https://cdn.buymeacoffee.com/buttons/default-yellow.png)](https://www.buymeacoffee.com/jwjeon)
+[![Buy Me A Coffee](https://cdn.buymeacoffee.com/buttons/default-yellow.png)](https://www.buymeacoffee.com/thejjw)
