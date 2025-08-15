@@ -11,6 +11,9 @@
 // Debug flag - can be toggled via popup
 let DEBUG_ENABLED = false;
 
+// CSS class name for annotated elements
+const ANNOTATION_CLASS = 'ip-annotated-highlighter-ext';
+
 // Initialize debug state from storage
 chrome.storage.local.get(['debugEnabled']).then(result => {
   DEBUG_ENABLED = result.debugEnabled ?? false; // Default to false
@@ -588,6 +591,9 @@ function performIPAnnotation() {
         }
         el.title = tooltipText;
 
+        // Add annotation class to mark this element as annotated
+        el.classList.add(ANNOTATION_CLASS);
+
         if (isKROnly) {
           // Darker green for KR only
           el.style.background = '#28a745';  // Bootstrap success color (darker green)
@@ -606,6 +612,7 @@ function performIPAnnotation() {
         debugLog(`Annotated element with countries: ${countries.join(', ')}, hasKR: ${hasKR}, isKROnly: ${isKROnly}`);
       } else {
         el.title = 'RIR Data: (no country assignment found)';
+        el.classList.add(ANNOTATION_CLASS);
         el.style.background = '#f8d7da';  // Bootstrap danger light
         el.style.borderRadius = '4px';
         el.style.padding = '2px 4px';
@@ -623,46 +630,14 @@ function performIPAnnotation() {
 function clearIPAnnotations() {
   debugLog('clearIPAnnotations called, removing existing annotations...');
   
-  // Determine which site we're on to select the correct elements
-  const host = window.location.hostname;
-  const isGall = host.endsWith('gall.dcinside.com');
-  const isMlbpark = host === 'mlbpark.donga.com';
-  const isNamu = host === 'namu.wiki';
-  const isArca = host === 'arca.live';
-  
-  let ipElements = [];
-  
-  if (isNamu) {
-    // For namu.wiki: Find annotated <a> elements with href="/contribution/..."
-    const contributionLinks = document.querySelectorAll('a[href*="/contribution/"]');
-    contributionLinks.forEach(link => {
-      const text = link.textContent.trim();
-      const ipPattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
-      if (ipPattern.test(text)) {
-        const parts = text.split('.').map(p => parseInt(p, 10));
-        if (parts.every(p => p >= 0 && p <= 255)) {
-          ipElements.push(link);
-        }
-      }
-    });
-  } else if (isArca) {
-    // For arca.live: Find annotated <small> elements inside <span class="user-info">
-    const userInfoSpans = document.querySelectorAll('span.user-info small');
-    userInfoSpans.forEach(small => {
-      const text = small.textContent.trim();
-      const ipPattern = /^\((\d{1,3})\.(\d{1,3})\)$/;
-      if (ipPattern.test(text)) {
-        ipElements.push(small);
-      }
-    });
-  } else {
-    // For other sites: Find span.ip elements
-    ipElements = Array.from(document.querySelectorAll('span.ip'));
-  }
-  
-  debugLog('Found', ipElements.length, 'IP elements to clear');
+  // Find all elements with the annotation class
+  const ipElements = document.querySelectorAll(`.${ANNOTATION_CLASS}`);
+  debugLog('Found', ipElements.length, 'annotated elements to clear');
   
   ipElements.forEach(function(el) {
+    // Remove annotation class
+    el.classList.remove(ANNOTATION_CLASS);
+    
     // Remove styling
     el.style.background = '';
     el.style.color = '';
