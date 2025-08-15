@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "IP Highlighter Extension",
-  "version": "1.4.1",
+  "version": "1.4.1-experimental",
   "description": "Automatically annotates IP addresses with their country codes on certain pages.",
   "icons": {
     "16": "icons/icon16.png",
@@ -11,9 +11,6 @@
   "homepage_url": "https://github.com/thejjw/ip-highlighter-extension",
   "action": {
     "default_popup": "popup.html"
-  },
-  "background": {
-    "service_worker": "background.js"
   },
   "permissions": [
     "storage",
@@ -30,5 +27,14 @@
       "js": ["content.js"],
       "run_at": "document_idle"
     }
-  ]
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "ip-highlighter@example.com",
+      "strict_min_version": "109.0"
+    }
+  },
+  "background": {
+    "scripts": ["background.js"]
+  }
 }
