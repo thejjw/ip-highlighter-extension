@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "IP Highlighter Extension",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "Automatically annotates IP addresses with their country codes on certain pages.",
   "icons": {
     "16": "icons/icon16.png",
@@ -25,7 +25,8 @@
       "matches": [
         "https://gall.dcinside.com/*",
         "https://mlbpark.donga.com/*",
-        "https://namu.wiki/*"
+        "https://namu.wiki/*",
+        "https://arca.live/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"
