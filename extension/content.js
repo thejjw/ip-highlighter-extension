@@ -623,8 +623,44 @@ function performIPAnnotation() {
 function clearIPAnnotations() {
   debugLog('clearIPAnnotations called, removing existing annotations...');
   
-  const ipElements = document.querySelectorAll('span.ip');
-  debugLog('Found', ipElements.length, 'span.ip elements to clear');
+  // Determine which site we're on to select the correct elements
+  const host = window.location.hostname;
+  const isGall = host.endsWith('gall.dcinside.com');
+  const isMlbpark = host === 'mlbpark.donga.com';
+  const isNamu = host === 'namu.wiki';
+  const isArca = host === 'arca.live';
+  
+  let ipElements = [];
+  
+  if (isNamu) {
+    // For namu.wiki: Find annotated <a> elements with href="/contribution/..."
+    const contributionLinks = document.querySelectorAll('a[href*="/contribution/"]');
+    contributionLinks.forEach(link => {
+      const text = link.textContent.trim();
+      const ipPattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+      if (ipPattern.test(text)) {
+        const parts = text.split('.').map(p => parseInt(p, 10));
+        if (parts.every(p => p >= 0 && p <= 255)) {
+          ipElements.push(link);
+        }
+      }
+    });
+  } else if (isArca) {
+    // For arca.live: Find annotated <small> elements inside <span class="user-info">
+    const userInfoSpans = document.querySelectorAll('span.user-info small');
+    userInfoSpans.forEach(small => {
+      const text = small.textContent.trim();
+      const ipPattern = /^\((\d{1,3})\.(\d{1,3})\)$/;
+      if (ipPattern.test(text)) {
+        ipElements.push(small);
+      }
+    });
+  } else {
+    // For other sites: Find span.ip elements
+    ipElements = Array.from(document.querySelectorAll('span.ip'));
+  }
+  
+  debugLog('Found', ipElements.length, 'IP elements to clear');
   
   ipElements.forEach(function(el) {
     // Remove styling
