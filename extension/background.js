@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: zlib-acknowledgement
 // Copyright (c) 2025 @thejjw
 
+// Supported sites for IP annotation
+const SUPPORTED_SITES = [
+  'https://gall.dcinside.com/*',
+  'https://mlbpark.donga.com/*',
+  'https://namu.wiki/*',
+  'https://arca.live/*'
+];
+
 chrome.runtime.onInstalled.addListener(() => {
   console.log('IP Country Annotator extension installed.');
   
@@ -9,7 +17,7 @@ chrome.runtime.onInstalled.addListener(() => {
     id: 'ip-annotator-parent',
     title: 'IP Country Annotator',
     contexts: ['page'],
-    documentUrlPatterns: ['https://gall.dcinside.com/*', 'https://mlbpark.donga.com/*', 'https://namu.wiki/*']
+    documentUrlPatterns: SUPPORTED_SITES
   });
   
   // Create child menu items under the parent
@@ -18,7 +26,7 @@ chrome.runtime.onInstalled.addListener(() => {
     parentId: 'ip-annotator-parent',
     title: 'Apply IP Analysis',
     contexts: ['page'],
-    documentUrlPatterns: ['https://gall.dcinside.com/*', 'https://mlbpark.donga.com/*', 'https://namu.wiki/*']
+    documentUrlPatterns: SUPPORTED_SITES
   });
   
   chrome.contextMenus.create({
@@ -26,7 +34,7 @@ chrome.runtime.onInstalled.addListener(() => {
     parentId: 'ip-annotator-parent',
     title: 'Clear IP Annotations',
     contexts: ['page'],
-    documentUrlPatterns: ['https://gall.dcinside.com/*', 'https://mlbpark.donga.com/*', 'https://namu.wiki/*']
+    documentUrlPatterns: SUPPORTED_SITES
   });
 });
 

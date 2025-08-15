@@ -5,10 +5,14 @@
 // This script runs on sites specified in manifest.json and annotates IP addresses using enhanced RIR_IPDB lookups.
 // For MLB Park, it uses more precise geolocation when additional octets are available (e.g., "IP: 58.29.*.54").
 // For namu.wiki, it uses precise lookup with full IP addresses.
+// For gall.dcinside.com and arca.live, it uses range queries with partial IP addresses (first two octets).
 // Now includes Korean Mobile Carrier (ISP) detection for 통피 identification.
 
 // Debug flag - can be toggled via popup
 let DEBUG_ENABLED = false;
+
+// CSS class name for annotated elements
+const ANNOTATION_CLASS = 'ip-annotated-highlighter-ext';
 
 // Initialize debug state from storage
 chrome.storage.local.get(['debugEnabled']).then(result => {
@@ -360,7 +364,8 @@ function performIPAnnotation() {
   const isGall = host.endsWith('gall.dcinside.com');
   const isMlbpark = host === 'mlbpark.donga.com';
   const isNamu = host === 'namu.wiki';
-  if (!isGall && !isMlbpark && !isNamu) {
+  const isArca = host === 'arca.live';
+  if (!isGall && !isMlbpark && !isNamu && !isArca) {
     debugLog('Not a supported site:', host);
     return;
   }
@@ -397,6 +402,21 @@ function performIPAnnotation() {
           }
         }
       });
+    } else if (isArca) {
+      // For arca.live: Find <small> elements inside <span class="user-info">
+      debugLog('Searching for arca.live IP elements...');
+      const userInfoSpans = document.querySelectorAll('span.user-info small');
+      debugLog(`Found ${userInfoSpans.length} user-info small elements`);
+      
+      userInfoSpans.forEach(small => {
+        const text = small.textContent.trim();
+        // Check if text matches the pattern (x.y) where x and y are numbers
+        const ipPattern = /^\((\d{1,3})\.(\d{1,3})\)$/;
+        if (ipPattern.test(text)) {
+          debugLog(`Found arca.live IP element: ${text}`);
+          ipElements.push(small);
+        }
+      });
     } else {
       // For other sites: Find span.ip elements
       ipElements = Array.from(document.querySelectorAll('span.ip'));
@@ -421,6 +441,15 @@ function performIPAnnotation() {
         }
       } else if (isGall) {
         // gall.dcinside.com: (156.146)
+        m = el.textContent.match(/\((\d+)\.(\d+)\)/);
+        if (m) {
+          num1 = parseInt(m[1], 10);
+          num2 = parseInt(m[2], 10);
+          num3 = null;
+          num4 = null;
+        }
+      } else if (isArca) {
+        // arca.live: (183.96) or (117.111)
         m = el.textContent.match(/\((\d+)\.(\d+)\)/);
         if (m) {
           num1 = parseInt(m[1], 10);
@@ -489,7 +518,7 @@ function performIPAnnotation() {
           countries = window.RIR_IPDB.queryAb(num1, num2);
         }
       } else {
-        // Fallback to range query for partial IPs or gall.dcinside.com
+        // Fallback to range query for partial IPs, gall.dcinside.com, or arca.live
         debugLog(`Using range query for: ${num1}.${num2}`);
         countries = window.RIR_IPDB.queryAb(num1, num2);
       }
@@ -562,6 +591,9 @@ function performIPAnnotation() {
         }
         el.title = tooltipText;
 
+        // Add annotation class to mark this element as annotated
+        el.classList.add(ANNOTATION_CLASS);
+
         if (isKROnly) {
           // Darker green for KR only
           el.style.background = '#28a745';  // Bootstrap success color (darker green)
@@ -580,6 +612,7 @@ function performIPAnnotation() {
         debugLog(`Annotated element with countries: ${countries.join(', ')}, hasKR: ${hasKR}, isKROnly: ${isKROnly}`);
       } else {
         el.title = 'RIR Data: (no country assignment found)';
+        el.classList.add(ANNOTATION_CLASS);
         el.style.background = '#f8d7da';  // Bootstrap danger light
         el.style.borderRadius = '4px';
         el.style.padding = '2px 4px';
@@ -597,10 +630,14 @@ function performIPAnnotation() {
 function clearIPAnnotations() {
   debugLog('clearIPAnnotations called, removing existing annotations...');
   
-  const ipElements = document.querySelectorAll('span.ip');
-  debugLog('Found', ipElements.length, 'span.ip elements to clear');
+  // Find all elements with the annotation class
+  const ipElements = document.querySelectorAll(`.${ANNOTATION_CLASS}`);
+  debugLog('Found', ipElements.length, 'annotated elements to clear');
   
   ipElements.forEach(function(el) {
+    // Remove annotation class
+    el.classList.remove(ANNOTATION_CLASS);
+    
     // Remove styling
     el.style.background = '';
     el.style.color = '';

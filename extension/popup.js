@@ -83,7 +83,7 @@ function showFeedback(message, type = 'info') {
   }, 3000);
 }
 
-// Initialize button text based on current debug state
+// Initialize popup elements
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     // Load version from manifest
@@ -92,12 +92,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (versionElement && manifestData.version) {
       versionElement.textContent = `v${manifestData.version}`;
     }
-    
-    // Initialize debug button
-    const result = await chrome.storage.local.get(['debugEnabled']);
-    const debugEnabled = result.debugEnabled ?? false; // Default to false
-    const button = document.getElementById('toggle-debug');
-    button.textContent = debugEnabled ? 'Disable Debug Mode' : 'Enable Debug Mode';
   } catch (error) {
     console.error('Error initializing popup:', error);
   }
