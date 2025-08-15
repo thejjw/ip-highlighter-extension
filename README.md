@@ -3,6 +3,8 @@
 
 Annotates IP addresses on supported web pages with their country codes for quick reference.
 
+This Firefox version is experimental.
+
 ## Features
 
 - **Automatic IP annotation:** Detects IP addresses on supported pages and displays their country codes on tooltip at user request.
@@ -14,12 +16,11 @@ Annotates IP addresses on supported web pages with their country codes for quick
 ## Installation
 
 1. Download or clone this repository.
-2. Go to `chrome://extensions` (or your browser's extensions page).
-3. Enable "Developer mode" (top right).
-4. Click "Load unpacked" and select the `extension` folder.
+2. Go to `about:debugging` (or your browser's equivalent page).
+3. Use "Load temporary add-on" and select the manifest file.
 
-**Alternatively, install from the [Naver Whale Store](https://store.whale.naver.com/detail/oimkdokokdnhpmoplhgcgcdmpkafncij)**  
-_(Note: The Whale Store version may not always have the latest updates.)_
+**Alternatively, install from the [AMO (addons.mozilla.org)](https://addons.mozilla.org/en-US/firefox/addon/ip-highlighter-extension/)**  
+_(Note: The AMO version may not always have the latest updates.)_
 
 ## Usage
 
