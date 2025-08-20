@@ -365,7 +365,8 @@ function performIPAnnotation() {
   const isMlbpark = host === 'mlbpark.donga.com';
   const isNamu = host === 'namu.wiki';
   const isArca = host === 'arca.live';
-  if (!isGall && !isMlbpark && !isNamu && !isArca) {
+  const isPpomppu = host === 'www.ppomppu.co.kr';
+  if (!isGall && !isMlbpark && !isNamu && !isArca && !isPpomppu) {
     debugLog('Not a supported site:', host);
     return;
   }
@@ -415,6 +416,37 @@ function performIPAnnotation() {
         if (ipPattern.test(text)) {
           debugLog(`Found arca.live IP element: ${text}`);
           ipElements.push(small);
+        }
+      });
+    } else if (isPpomppu) {
+      // For ppomppu.co.kr: Find two patterns:
+      // 1. "IP 106.101.x.52" in <small> within <li class="topTitle-name">
+      // 2. "(IP:106.101.x.52)" in <font class="over_hide">
+      debugLog('Searching for ppomppu.co.kr IP elements...');
+      
+      // Pattern 1: <li class="topTitle-name"> > <small> containing "IP x.x.x.x"
+      const titleNameItems = document.querySelectorAll('li.topTitle-name small');
+      debugLog(`Found ${titleNameItems.length} topTitle-name small elements`);
+      
+      titleNameItems.forEach(small => {
+        const text = small.textContent.trim();
+        // Check if text contains "IP x.x.x.x" pattern
+        if (/IP\s+\d+\.\d+\.x\.\d+/.test(text)) {
+          debugLog(`Found ppomppu.co.kr IP element (pattern 1): ${text}`);
+          ipElements.push(small);
+        }
+      });
+      
+      // Pattern 2: <font class="over_hide"> containing "(IP:x.x.x.x)"
+      const fontElements = document.querySelectorAll('font.over_hide');
+      debugLog(`Found ${fontElements.length} font.over_hide elements`);
+      
+      fontElements.forEach(font => {
+        const text = font.textContent.trim();
+        // Check if text matches the pattern (IP:x.x.x.x)
+        if (/^\(IP:\d+\.\d+\.x\.\d+\)$/.test(text)) {
+          debugLog(`Found ppomppu.co.kr IP element (pattern 2): ${text}`);
+          ipElements.push(font);
         }
       });
     } else {
@@ -467,6 +499,30 @@ function performIPAnnotation() {
           num3 = m[3] ? parseInt(m[3], 10) : null; // Third octet if available
           num4 = m[4] ? parseInt(m[4], 10) : null; // Last octet if available
         }
+      } else if (isPpomppu) {
+        // ppomppu.co.kr: "IP 106.101.x.52" or "(IP:106.101.x.52)"
+        // Both patterns have the format a.b.x.d where x is hidden
+        const text = el.textContent.trim();
+        
+        // Pattern 1: "IP 106.101.x.52" (within longer text)
+        let ppomppuMatch = text.match(/IP\s+(\d+)\.(\d+)\.x\.(\d+)/);
+        if (ppomppuMatch) {
+          num1 = parseInt(ppomppuMatch[1], 10);
+          num2 = parseInt(ppomppuMatch[2], 10);
+          num3 = null; // x is hidden
+          num4 = parseInt(ppomppuMatch[3], 10);
+          m = ppomppuMatch; // Set m to indicate we found a match
+        } else {
+          // Pattern 2: "(IP:106.101.x.52)"
+          ppomppuMatch = text.match(/^\(IP:(\d+)\.(\d+)\.x\.(\d+)\)$/);
+          if (ppomppuMatch) {
+            num1 = parseInt(ppomppuMatch[1], 10);
+            num2 = parseInt(ppomppuMatch[2], 10);
+            num3 = null; // x is hidden
+            num4 = parseInt(ppomppuMatch[3], 10);
+            m = ppomppuMatch; // Set m to indicate we found a match
+          }
+        }
       }
       
       if (!m) {
@@ -481,8 +537,8 @@ function performIPAnnotation() {
         debugLog(`Using precise IP lookup for: ${fullIp}`);
         const country = window.RIR_IPDB.findCountryForIp(fullIp);
         countries = country ? [country] : [];
-      } else if (isMlbpark && (num3 !== null || num4 !== null)) {
-        // For MLB Park with partial IP info, try more precise lookup
+      } else if ((isMlbpark && (num3 !== null || num4 !== null)) || (isPpomppu && num4 !== null)) {
+        // For MLB Park with partial IP info or ppomppu with a.b.x.d pattern, try more precise lookup
         // Sample multiple IPs in the range to get better coverage
         const countriesSet = new Set();
         
@@ -548,8 +604,8 @@ function performIPAnnotation() {
             if (isMlbpark && num3 !== null) {
               // Pattern like a.b.c.*
               testIps.push(`${num1}.${num2}.${num3}.1`, `${num1}.${num2}.${num3}.50`, `${num1}.${num2}.${num3}.100`);
-            } else if (isMlbpark && num4 !== null) {
-              // Pattern like a.b.*.d
+            } else if ((isMlbpark && num4 !== null) || (isPpomppu && num4 !== null)) {
+              // Pattern like a.b.*.d (mlbpark) or a.b.x.d (ppomppu)
               testIps.push(`${num1}.${num2}.1.${num4}`, `${num1}.${num2}.50.${num4}`, `${num1}.${num2}.100.${num4}`);
             } else {
               // Pattern like a.b.*.*
@@ -586,6 +642,8 @@ function performIPAnnotation() {
           } else {
             tooltipText += ` (enhanced: ${num1}.${num2}.${num3}.*)`;
           }
+        } else if (isPpomppu && num4 !== null) {
+          tooltipText += ` (enhanced: ${num1}.${num2}.x.${num4})`;
         } else {
           tooltipText += ` (range: ${num1}.${num2}.*.*)`;
         }
