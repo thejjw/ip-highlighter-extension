@@ -44,14 +44,14 @@ The extension consists of:
 ### 5. www.ppomppu.co.kr
 - **Elements**: 
   - `<small>` inside `<li class="topTitle-name">`
-  - `<font class="over_hide">` inside `<td class="comment_template_depth*">` inside `<div id="comment_####">`
+  - `<font class="over_hide">`
 - **Patterns**:
   - `IP 106.101.x.52` (in longer text)
   - `(IP:106.101.x.52)` (standalone)
 - **Lookup**: Enhanced sampling `a.b.*.d` (similar to mlbpark)
 - **Examples**: 
   - `<small>IP 106.101.x.52  포인트 363 가입일 2025-02-18</small>`
-  - `<div id="comment_15194987"><td class="comment_template_depth3_vote"><font class="over_hide">(IP:106.101.x.52)</font></td></div>`
+  - `<font class="over_hide">(IP:106.101.x.52)</font>`
 
 ## IP Lookup Strategies
 
@@ -116,21 +116,9 @@ if (isNamu) {
   // Target specific elements with IP-like href patterns
   ipElements = Array.from(document.querySelectorAll('a[href*="/contribution/ip/"]'));
 } else if (isPpomppu) {
-  // Pattern 1: Simple selector for title areas
+  // Multiple element types and patterns
   document.querySelectorAll('li.topTitle-name small');
-  
-  // Pattern 2: Hierarchical filtering for comment areas
-  // div[id^="comment_"] → filter(/^comment_\d+$/) → td[class*="comment_template_depth"] → font.over_hide
-  const commentDivs = document.querySelectorAll('div[id^="comment_"]');
-  commentDivs.forEach(div => {
-    if (/^comment_\d+$/.test(div.id)) {
-      const depthTds = div.querySelectorAll('td[class*="comment_template_depth"]');
-      depthTds.forEach(td => {
-        const fonts = td.querySelectorAll('font.over_hide');
-        // Process fonts for IP patterns...
-      });
-    }
-  });
+  document.querySelectorAll('font.over_hide');
 } else {
   // Fallback to generic span.ip
   ipElements = Array.from(document.querySelectorAll('span.ip'));
@@ -201,4 +189,3 @@ To add a new site:
 - **Sampling**: Enhanced lookup limits samples to prevent blocking
 - **Caching**: Single database load per page session
 - **Selective Processing**: Only runs on matching hostnames
-- **Hierarchical Filtering**: For complex sites like ppomppu, uses multi-level DOM traversal to avoid false positives while maintaining precision
