@@ -437,16 +437,34 @@ function performIPAnnotation() {
         }
       });
       
-      // Pattern 2: <font class="over_hide"> containing "(IP:x.x.x.x)"
-      const fontElements = document.querySelectorAll('font.over_hide');
-      debugLog(`Found ${fontElements.length} font.over_hide elements`);
+      // Pattern 2: More specific hierarchy - <div id="comment_*"> → <td class="comment_template_depth*"> → <font class="over_hide">
+      const commentDivs = document.querySelectorAll('div[id^="comment_"]');
+      debugLog(`Found ${commentDivs.length} div elements with id starting with "comment_"`);
       
-      fontElements.forEach(font => {
-        const text = font.textContent.trim();
-        // Check if text matches the pattern (IP:x.x.x.x)
-        if (/^\(IP:\d+\.\d+\.x\.\d+\)$/.test(text)) {
-          debugLog(`Found ppomppu.co.kr IP element (pattern 2): ${text}`);
-          ipElements.push(font);
+      commentDivs.forEach(commentDiv => {
+        // Check if the div id matches the pattern comment_#### (numeric)
+        const commentId = commentDiv.id;
+        if (/^comment_\d+$/.test(commentId)) {
+          debugLog(`Processing comment div: ${commentId}`);
+          
+          // Look for td elements with class starting with "comment_template_depth"
+          const depthTds = commentDiv.querySelectorAll('td[class^="comment_template_depth"]');
+          debugLog(`Found ${depthTds.length} td elements with comment_template_depth class in ${commentId}`);
+          
+          depthTds.forEach(td => {
+            // Look for font elements with class "over_hide" within this td
+            const fontElements = td.querySelectorAll('font.over_hide');
+            debugLog(`Found ${fontElements.length} font.over_hide elements in td`);
+            
+            fontElements.forEach(font => {
+              const text = font.textContent.trim();
+              // Check if text matches the pattern (IP:x.x.x.x)
+              if (/^\(IP:\d+\.\d+\.x\.\d+\)$/.test(text)) {
+                debugLog(`Found ppomppu.co.kr IP element (pattern 2): ${text} in ${commentId}`);
+                ipElements.push(font);
+              }
+            });
+          });
         }
       });
     } else {
