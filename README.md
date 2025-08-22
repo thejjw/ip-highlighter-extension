@@ -44,6 +44,6 @@ This extension uses the [fflate](https://github.com/101arrowz/fflate) project (M
 ## Author
 - Jaewoo Jeon [@thejjw](https://github.com/thejjw)
 
-If you find this extension helpful, consider supporting its development:
+If you find this extension helpful, consider supporting its development via GitHub Sponsors (one-time or monthly), or Buy Me a Coffee:
 
 [![Buy Me A Coffee](https://cdn.buymeacoffee.com/buttons/default-yellow.png)](https://www.buymeacoffee.com/thejjw)
