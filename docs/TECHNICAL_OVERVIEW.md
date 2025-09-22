@@ -53,6 +53,13 @@ The extension consists of:
   - `<small>IP 106.101.x.52  포인트 363 가입일 2025-02-18</small>`
   - `<div id="comment_15194987"><td class="comment_template_depth3_vote"><font class="over_hide">(IP:106.101.x.52)</font></td></div>`
 
+### 6. bbs.ruliweb.com
+- **Elements**: `<span class="ip_show">`
+- **Pattern**: `221.166.***.***` - first two octets with starred last two
+- **Lookup**: Range query `a.b.*.*`
+- **URL Pattern**: `/community/board/*/read/*` (board posts only)
+- **Example**: `<span class="ip_show">221.166.***.***</span>`
+
 ## IP Lookup Strategies
 
 ### 1. Precise Lookup

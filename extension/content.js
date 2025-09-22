@@ -366,7 +366,8 @@ function performIPAnnotation() {
   const isNamu = host === 'namu.wiki';
   const isArca = host === 'arca.live';
   const isPpomppu = host === 'www.ppomppu.co.kr';
-  if (!isGall && !isMlbpark && !isNamu && !isArca && !isPpomppu) {
+  const isRuliweb = host === 'bbs.ruliweb.com' && /\/community\/board\/\d+\/read\/\d+/.test(window.location.pathname);
+  if (!isGall && !isMlbpark && !isNamu && !isArca && !isPpomppu && !isRuliweb) {
     debugLog('Not a supported site:', host);
     return;
   }
@@ -467,6 +468,20 @@ function performIPAnnotation() {
           });
         }
       });
+    } else if (isRuliweb) {
+      // For bbs.ruliweb.com: Find <span class="ip_show"> elements
+      debugLog('Searching for bbs.ruliweb.com IP elements...');
+      const ipShowSpans = document.querySelectorAll('span.ip_show');
+      debugLog(`Found ${ipShowSpans.length} span.ip_show elements`);
+      
+      ipShowSpans.forEach(span => {
+        const text = span.textContent.trim();
+        // Check if text matches the pattern a.b.***.*** (first two octets with starred last two)
+        if (/^\d{1,3}\.\d{1,3}\.\*\*\*\.\*\*\*$/.test(text)) {
+          debugLog(`Found bbs.ruliweb.com IP element: ${text}`);
+          ipElements.push(span);
+        }
+      });
     } else {
       // For other sites: Find span.ip elements
       ipElements = Array.from(document.querySelectorAll('span.ip'));
@@ -540,6 +555,15 @@ function performIPAnnotation() {
             num4 = parseInt(ppomppuMatch[3], 10);
             m = ppomppuMatch; // Set m to indicate we found a match
           }
+        }
+      } else if (isRuliweb) {
+        // bbs.ruliweb.com: "221.166.***.***" - first two octets shown, last two starred
+        m = el.textContent.match(/^(\d+)\.(\d+)\.\*\*\*\.\*\*\*$/);
+        if (m) {
+          num1 = parseInt(m[1], 10);
+          num2 = parseInt(m[2], 10);
+          num3 = null;
+          num4 = null;
         }
       }
       
