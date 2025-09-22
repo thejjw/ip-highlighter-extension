@@ -7,7 +7,8 @@ const SUPPORTED_SITES = [
   'https://mlbpark.donga.com/*',
   'https://namu.wiki/*',
   'https://arca.live/*',
-  'https://www.ppomppu.co.kr/*'
+  'https://www.ppomppu.co.kr/*',
+  'https://bbs.ruliweb.com/*'
 ];
 
 chrome.runtime.onInstalled.addListener(() => {

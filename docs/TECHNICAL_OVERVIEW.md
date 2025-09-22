@@ -1,5 +1,24 @@
 # IP Highlighter Extension - Technical Overview
 
+## ⚠️ IMPORTANT: Adding New Sites Checklist
+
+When adding support for a new site, ensure ALL of the following files are updated:
+
+1. **manifest.json**: Add URL pattern to `content_scripts.matches[]`
+2. **content.js**: 
+   - Add site detection logic (hostname + URL pattern validation)
+   - Add element discovery logic for finding IP elements
+   - Add IP pattern extraction logic for the site's specific format
+   - Update site condition checks in all relevant sections
+3. **background.js**: Add URL pattern to `SUPPORTED_SITES[]` for context menu support
+4. **docs/TECHNICAL_OVERVIEW.md**: Document the new site's patterns and behavior
+
+**Common mistakes to avoid:**
+- Forgetting to update background.js (context menu won't work)
+- Not validating URL patterns properly (extension runs on wrong pages)
+- Missing site checks in ISP detection logic
+- Inconsistent pattern handling across different lookup methods
+
 ## Architecture Overview
 
 The extension consists of:
